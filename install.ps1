@@ -1,5 +1,5 @@
 ﻿# ============================================================
-#  cc-toolkit / install.ps1  V1.0.0
+#  cc-toolkit / install.ps1  V1.1.0
 #  Claude Code 国内安装/修复一键脚本（Windows 11 + PowerShell 5.1）
 #  中国网络环境：npm 走 npmmirror 镜像，Node 走 npmmirror CDN
 #  源码仓库：https://gitee.com/yellowgu/cc-toolkit
@@ -20,10 +20,10 @@ function Die($msg)  { Bad $msg; exit 1 }
 
 # ---------- 横幅 ----------
 Say '================================================================'
-Say '  cc-toolkit V1.0.0 —— Claude Code 国内安装/修复脚本'
+Say '  cc-toolkit V1.1.0 —— Claude Code 国内安装/修复脚本'
 Say ('  源码可见：' + $RepoUrl + '  （非官方，与 Anthropic 无关）')
 Say '================================================================'
-Tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → settings.json 配置 → 收尾验证'
+Tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → 模型配置(交互) → 收尾验证'
 Tip '每一步都会先打印说明再执行；已完成的步骤重跑时会自动跳过。'
 
 # ---------- 1/8 环境检测 ----------
@@ -174,42 +174,83 @@ if ($olds.Count -gt 0) {
     Ok '无残留 .old.* 备份。'
 }
 
-# ---------- 7/8 settings.json 自动配置 ----------
-Step '7/8 settings.json 写入 DISABLE_AUTOUPDATER（自动合并 + 备份 + 可回滚）'
+# ---------- 7/8 模型配置 + settings.json 自动配置 ----------
+Step '7/8 模型配置（交互）+ settings.json 自动写入（自动合并 + 备份 + 可回滚）'
 $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
-$bak = $settingsPath + '.bak-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
-$targetJson = @"
-{
-  "env": {
-    "DISABLE_AUTOUPDATER": "1"
-  }
+
+# 7a. 模型方案选择（交互；支持环境变量预置无人值守）
+$useDS = $false
+$dsKey = ''
+if (-not [string]::IsNullOrWhiteSpace($env:CC_TOOLKIT_DS_KEY)) {
+    $useDS = $true
+    $dsKey = $env:CC_TOOLKIT_DS_KEY.Trim()
+    Tip '检测到环境变量 CC_TOOLKIT_DS_KEY，自动配置 DeepSeek 模型（无人值守模式，跳过询问）。'
+    Ok '已收到 Key（只写入本机 settings.json，不上传）。'
+} else {
+    Say ''
+    Tip '模型方案选择：'
+    Tip '  Y = 配置 DeepSeek 模型（国内网络流畅，推荐；只需一个 DeepSeek API Key）'
+    Tip '  n = 跳过，稍后自行登录 Anthropic 官方账号或手工配置'
+    $choice = Read-Host '是否配置 DeepSeek 模型？[Y/n]（直接回车=是）'
+    if ($choice -eq '' -or $choice -match '^[Yy]') {
+        $useDS = $true
+        Tip '请在 https://platform.deepseek.com 充值并创建 API Key（sk- 开头），粘贴后回车（输入不回显）：'
+        Tip '留空回车 = 本次只关自动更新，模型以后自己配。'
+        $sec = Read-Host '请输入 DeepSeek API Key' -AsSecureString
+        $dsKey = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+        $dsKey = $dsKey.Trim()
+        if ([string]::IsNullOrWhiteSpace($dsKey)) {
+            $useDS = $false
+            Warn '未输入 Key，跳过模型配置（只关自动更新）。'
+        } else {
+            Ok '已收到 Key（只写入本机 settings.json，不上传）。'
+        }
+    } else {
+        Tip '已跳过模型配置。'
+    }
 }
-"@
+
+# 7b. 合并写入 env 块（备份 + 保留其他键 + 回滚提示）
+$envPatch = @{ 'DISABLE_AUTOUPDATER' = '1' }
+if ($useDS) {
+    $envPatch['ANTHROPIC_BASE_URL'] = 'https://api.deepseek.com/anthropic'
+    $envPatch['ANTHROPIC_AUTH_TOKEN'] = $dsKey
+    $envPatch['ANTHROPIC_MODEL'] = 'deepseek-v4-pro'
+    $envPatch['ANTHROPIC_DEFAULT_OPUS_MODEL'] = 'deepseek-v4-pro'
+    $envPatch['ANTHROPIC_DEFAULT_SONNET_MODEL'] = 'deepseek-v4-flash'
+    $envPatch['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = 'deepseek-v4-flash'
+    $envPatch['ANTHROPIC_DEFAULT_FABLE_MODEL'] = 'deepseek-v4-pro'
+    $envPatch['CLAUDE_CODE_SUBAGENT_MODEL'] = 'deepseek-v4-pro'
+}
+$bak = $settingsPath + '.bak-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+$jsonObj = $null
+$parseFailed = $false
 if (Test-Path $settingsPath) {
     Copy-Item $settingsPath $bak -Force
     Tip ('已备份原文件：' + $bak)
     try {
         $raw = [System.IO.File]::ReadAllText($settingsPath, [System.Text.Encoding]::UTF8)
-        $obj = $raw | ConvertFrom-Json
-        if (-not $obj.PSObject.Properties['env']) { $obj | Add-Member -NotePropertyName env -NotePropertyValue ([pscustomobject]@{}) }
-        if (-not $obj.env.PSObject.Properties['DISABLE_AUTOUPDATER']) { $obj.env | Add-Member -NotePropertyName DISABLE_AUTOUPDATER -NotePropertyValue '1' }
-        else { $obj.env.DISABLE_AUTOUPDATER = '1' }
-        $out = $obj | ConvertTo-Json -Depth 10
-        [System.IO.File]::WriteAllText($settingsPath, $out, (New-Object System.Text.UTF8Encoding $false))
-        Tip '改动内容：env.DISABLE_AUTOUPDATER = 1（关闭自动更新，唯一有效开关）。其他已有配置键全部保留。'
-        Tip ('如需回滚：Copy-Item "' + $bak + '" "' + $settingsPath + '"')
-        Ok 'settings.json 已合并写入。'
+        $jsonObj = $raw | ConvertFrom-Json
     } catch {
-        Warn 'settings.json 解析失败（可能不是标准 JSON），未改动该文件，避免破坏你的配置。'
-        Tip '请手工在 settings.json 中加：{"env": {"DISABLE_AUTOUPDATER": "1"}}'
-        Tip ('原文件备份仍在：' + $bak)
+        $parseFailed = $true
+        Warn '现有 settings.json 解析失败（可能不是标准 JSON），将重建为标准 JSON（原文件已备份，请自行迁移自定义配置）。'
     }
-} else {
-    New-Item -ItemType Directory -Path (Split-Path $settingsPath) -Force | Out-Null
-    [System.IO.File]::WriteAllText($settingsPath, $targetJson, (New-Object System.Text.UTF8Encoding $false))
-    Tip 'settings.json 不存在，已新建（含 env.DISABLE_AUTOUPDATER=1）。'
-    Ok 'settings.json 已创建。'
 }
+if ($null -eq $jsonObj) { $jsonObj = New-Object pscustomobject }
+if (-not $jsonObj.PSObject.Properties['env']) { $jsonObj | Add-Member -NotePropertyName env -NotePropertyValue ([pscustomobject]@{}) }
+foreach ($k in $envPatch.Keys) {
+    if (-not $jsonObj.env.PSObject.Properties[$k]) { $jsonObj.env | Add-Member -NotePropertyName $k -NotePropertyValue $envPatch[$k] }
+    else { $jsonObj.env.$k = $envPatch[$k] }
+}
+$out = $jsonObj | ConvertTo-Json -Depth 10
+$settingsDir = Split-Path $settingsPath
+if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
+[System.IO.File]::WriteAllText($settingsPath, $out, (New-Object System.Text.UTF8Encoding $false))
+Tip '改动内容：'
+foreach ($k in $envPatch.Keys) { if ($k -ne 'ANTHROPIC_AUTH_TOKEN') { Tip ('  env.' + $k + ' = ' + $envPatch[$k]) } }
+if ($useDS) { Tip '  env.ANTHROPIC_AUTH_TOKEN = sk-***（已隐藏显示）' }
+Tip ('如需回滚：Copy-Item "' + $bak + '" "' + $settingsPath + '"')
+Ok 'settings.json 已合并写入（其他已有配置键全部保留）。'
 
 # ---------- 8/8 收尾 ----------
 Step '8/8 收尾验证'
@@ -225,7 +266,8 @@ Say '================================================================'
 Say '  全部步骤完成。'
 Tip '下一步：'
 Tip '  1. 关闭本窗口，重新打开 PowerShell（让环境变量与 PATH 生效）'
-Tip '  2. 运行 claude 首次交互（登录或配 API key，见 README FAQ）'
+if ($useDS) { Tip '  2. 已配置 DeepSeek 模型：重开终端后直接运行 claude 即可使用（免登录）' }
+else { Tip '  2. 运行 claude 首次交互（登录官方账号，或自行配置第三方模型，见 README FAQ）' }
 Tip '  3. 已有 Claude Code 的用户：可安装本仓库 plugin 获得自动化故障修复'
 Tip '     /plugin marketplace add yellowgu/cc-toolkit'
 Tip '     /plugin install cc-toolkit@cc-toolkit'

@@ -31,7 +31,7 @@ irm https://gitee.com/yellowgu/cc-toolkit/raw/main/install.ps1 -OutFile install.
 4. 关闭自动更新（`DISABLE_AUTOUPDATER=1`）
 5. 安装 Claude Code（npm npmmirror 镜像）
 6. 故障修复自检（shim 重建、占位 exe 还原、清理残留）
-7. settings.json 自动配置（**改前备份、合并不覆盖你的其他配置、可回滚**）
+7. 模型配置（**交互**：回车确认配置 DeepSeek → 粘贴 API Key，输入不回显、只写本机；也可选 n 跳过）+ settings.json 自动配置（**改前备份、合并不覆盖你的其他配置、可回滚**）
 8. 收尾验证
 
 **注意事项**：
@@ -39,6 +39,8 @@ irm https://gitee.com/yellowgu/cc-toolkit/raw/main/install.ps1 -OutFile install.
 - 脚本**可重入**：装 Node 后提示重开终端，重跑即可继续，已完成的步骤自动跳过
 - 装 Node 需要**管理员权限**：若脚本提示，请右键 PowerShell"以管理员身份运行"后重跑
 - 检测到 Claude Code 进程运行时，脚本会**提示关闭后重跑**，绝不强杀进程
+- 装完最后会**询问是否配置 DeepSeek 模型**（国内网络推荐）：回车 → 粘贴 DeepSeek API Key（输入不回显、只写本机、不上传）→ 完成；选 n 跳过，之后可登录官方账号或手工配置
+- 高级（无人值守/远程装机）：先设环境变量再跑脚本，自动跳过询问：`$env:CC_TOOLKIT_DS_KEY = 'sk-你的key'; .\install.ps1`
 - 脚本来自本仓库源码，**不放心的同学可先在网页查看 install.ps1 源码**，再下载运行（两轨一致）
 - 供应链说明：本脚本是"下载即执行"，请自行判断信任。所有下载地址均为固定版本（不随最新版漂移）
 
@@ -73,7 +75,18 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 Get-Process claude   # 必须无输出
 npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.com/
 
-# 4. 验证
+# 4. （可选）配置 DeepSeek 模型：%USERPROFILE%\.claude\settings.json 的 env 块
+{ "env": {
+    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "sk-你的key",
+    "ANTHROPIC_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-v4-pro",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro" } }
+
+# 5. 验证
 claude --version
 ```
 
@@ -97,7 +110,7 @@ claude --version
 
 **怎么卸载？** `npm uninstall -g @anthropic-ai/claude-code`。
 
-**能配第三方模型（如 DeepSeek）吗？** 可以。用 `--settings` 文件方式，参考 [dsh-toolkit](https://gitee.com/yellowgu/dsh-toolkit) 或本仓库 skill 第 6 节（注意：该节含 `--dangerously-skip-permissions` 启动方式，仅建议单机本地自用）。
+**能配第三方模型（如 DeepSeek）吗？** 可以，而且安装脚本最后会**交互询问**——回车确认后粘贴 DeepSeek API Key 即自动配好（模型映射、base_url、token 全写入 settings.json，只写本机）。错过询问也没关系：重跑脚本即可补配，或按"手动安装步骤"第 4 步手工配置。更多模型配置玩法（`--settings` 文件、双模型快捷启动）见本仓库 skill 第 6 节（注意：该节含 `--dangerously-skip-permissions` 启动方式，仅建议单机本地自用）。
 
 ## 关于
 

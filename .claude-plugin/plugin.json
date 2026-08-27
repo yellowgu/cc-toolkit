@@ -1,6 +1,6 @@
 {
   "name": "cc-toolkit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Claude Code 国内环境安装/修复工具箱（非官方）：npmmirror 安装、EBUSY/占位 exe 修复、关闭自动更新。面向中文用户。",
   "author": { "name": "yellowgu", "email": "yellowgu@163.com" },
   "homepage": "https://gitee.com/yellowgu/cc-toolkit",
