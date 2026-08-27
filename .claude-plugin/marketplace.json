@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "cc-toolkit",
+  "version": "1.0.0",
+  "description": "Claude Code 国内安装/修复插件市场（自包含，仅一个插件）",
+  "owner": { "name": "yellowgu", "email": "yellowgu@163.com" },
+  "plugins": [
+    {
+      "name": "cc-toolkit",
+      "description": "Claude Code 国内安装/修复 skill（装=脚本，修=本 skill）",
+      "version": "1.0.0",
+      "author": { "name": "yellowgu" },
+      "source": "./",
+      "category": "dev-environment"
+    }
+  ]
+}
