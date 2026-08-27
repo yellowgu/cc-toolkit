@@ -21,7 +21,7 @@ function Die($msg)  { Bad $msg; exit 1 }
 # ---------- 横幅 ----------
 Say '================================================================'
 Say '  cc-toolkit V1.0.0 —— Claude Code 国内安装/修复脚本'
-Say '  源码可见：' + $RepoUrl + '  （非官方，与 Anthropic 无关）'
+Say ('  源码可见：' + $RepoUrl + '  （非官方，与 Anthropic 无关）')
 Say '================================================================'
 Tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → settings.json 配置 → 收尾验证'
 Tip '每一步都会先打印说明再执行；已完成的步骤重跑时会自动跳过。'
@@ -49,7 +49,11 @@ if (-not $nodeOk) {
 
 $hasClaude = $null -ne (Get-Command claude -ErrorAction SilentlyContinue)
 if ($hasClaude) {
-    try { Ok ('Claude Code 已检测到：' + ((& claude --version 2>$null | Out-String).Trim().Split("`n")[0])) }
+    try {
+        $cv = (& claude --version 2>$null | Out-String).Trim()
+        if ($cv) { Ok ('Claude Code 已检测到：' + $cv.Split("`n")[0]) }
+        else { Warn 'claude 命令存在但版本获取失败（可能已损坏），稍后步骤 6/8 会自动修复。' }
+    }
     catch { Warn 'claude 命令存在但执行失败（可能已损坏），稍后步骤 6/8 会自动修复。' }
 } else {
     Tip '未检测到 claude 命令，稍后步骤 5/8 将自动安装。'
@@ -77,7 +81,7 @@ if (-not $nodeOk) {
 # ---------- 3/8 解除执行策略 ----------
 Step '3/8 解除 PowerShell 执行策略拦截'
 Tip '症状为"npm : 无法加载文件 ...npm.ps1，因为在此系统上禁止运行脚本"。修复方法：当前用户范围设为 RemoteSigned（不需要管理员）。'
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force | Out-Null
 $pol = (Get-ExecutionPolicy -Scope CurrentUser).ToString()
 if ($pol -eq 'RemoteSigned') { Ok ('执行策略已设为 ' + $pol) } else { Warn ('当前策略：' + $pol + '（若后续仍报 npm.ps1 禁止运行，请重开终端再试）') }
 
@@ -116,16 +120,18 @@ $pkgRoot = Join-Path $npmRoot 'node_modules\@anthropic-ai\claude-code'
 $binExe  = Join-Path $pkgRoot 'bin\claude.exe'
 $realExe = Join-Path $pkgRoot 'node_modules\@anthropic-ai\claude-code-win32-x64\claude.exe'
 
-# 6a. claude 命令无法识别 → 重建 claude.cmd shim
-if (-not $hasClaude) {
+# 6a. claude 命令不可用（无法识别或已损坏）→ 重建 claude.cmd shim
+$claudeWorks = $false
+try { $v6 = (& claude --version 2>$null | Out-String).Trim(); if ($v6) { $claudeWorks = $true } } catch {}
+if (-not $claudeWorks) {
     if (Test-Path $realExe) {
-        Tip 'claude 命令无法识别但包本体还在：重建 claude.cmd shim。'
+        Tip 'claude 命令不可用但包本体还在：重建 claude.cmd shim。'
         $shim = Join-Path $npmRoot 'claude.cmd'
         $content = '@ECHO off' + "`r`n" + 'SETLOCAL' + "`r`n" + 'SET dp0=%~dp0' + "`r`n" + '"%dp0%node_modules\@anthropic-ai\claude-code\bin\claude.exe" %*' + "`r`n"
         [System.IO.File]::WriteAllText($shim, $content, (New-Object System.Text.ASCIIEncoding))
         Ok ('已重建 claude.cmd（刻意不建 claude.ps1，避免 Restricted 策略再拦）。')
     } else {
-        Warn 'claude 命令无法识别且包本体不存在：跳过 shim 修复（请先确认步骤 5/8 安装成功）。'
+        Warn 'claude 命令不可用且包本体不存在：跳过 shim 修复（请先确认步骤 5/8 安装成功）。'
     }
 } else {
     Ok 'claude 命令可用，shim 无需修复。'
@@ -223,5 +229,5 @@ Tip '  2. 运行 claude 首次交互（登录或配 API key，见 README FAQ）'
 Tip '  3. 已有 Claude Code 的用户：可安装本仓库 plugin 获得自动化故障修复'
 Tip '     /plugin marketplace add yellowgu/cc-toolkit'
 Tip '     /plugin install cc-toolkit@cc-toolkit'
-Tip '  故障排查：' + $RepoUrl + ' 的 README 故障表；或提 issue。'
+Tip ('  故障排查：' + $RepoUrl + ' 的 README 故障表；或提 issue。')
 Say '================================================================'
