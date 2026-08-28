@@ -15,13 +15,18 @@
 | 已有 Claude Code，但出了故障（EBUSY、`claude` 无法识别、exe 变占位脚本） | 一条命令安装（脚本自动检测+修复），或安装 Plugin 让修复自动化 |
 | 只想看文档手动操作 | "手动安装步骤" + "常见故障表" |
 
-## 一条命令安装
+## 一条命令安装（唯一推荐入口）
 
-打开 PowerShell，粘贴整行回车（会先下载脚本到当前目录，再执行）：
+> ⚠️ **不要下载脚本后双击运行**：双击 .ps1 会因执行策略拦截或窗口跑完即关而"闪退"，看起来像脚本坏了。也不要右键"使用 PowerShell 运行"。**唯一正确姿势 = 打开 PowerShell 窗口，粘贴下面这一条命令。**
+
+打开 PowerShell（Win+X → 终端），粘贴整行回车（会先下载脚本到当前目录，再以放行模式执行；新电脑默认的 Restricted 执行策略拦不住）：
 
 ```powershell
-irm https://gitee.com/yellowgu/cc-toolkit/raw/main/install.ps1 -OutFile install.ps1; .\install.ps1
+irm https://gitee.com/yellowgu/cc-toolkit/raw/main/install.ps1 -OutFile install.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
 ```
+
+- 脚本第 3 步会把执行策略修成 RemoteSigned，之后重跑可用简写：`.\install.ps1`
+- 帮别人现场装？把这条命令发给他即可（不要发脚本文件让人双击）
 
 脚本会做这些事（**每一步都会先打印说明再执行**）：
 
