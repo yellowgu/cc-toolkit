@@ -81,9 +81,17 @@ if (-not $nodeOk) {
 # ---------- 3/8 解除执行策略 ----------
 Step '3/8 解除 PowerShell 执行策略拦截'
 Tip '症状为"npm : 无法加载文件 ...npm.ps1，因为在此系统上禁止运行脚本"。修复方法：当前用户范围设为 RemoteSigned（不需要管理员）。'
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force | Out-Null
-$pol = (Get-ExecutionPolicy -Scope CurrentUser).ToString()
-if ($pol -eq 'RemoteSigned') { Ok ('执行策略已设为 ' + $pol) } else { Warn ('当前策略：' + $pol + '（若后续仍报 npm.ps1 禁止运行，请重开终端再试）') }
+# 进程作用域已是 Bypass（如以 powershell -ExecutionPolicy Bypass 启动）或被组策略锁定时，
+# 本行会抛 SecurityException：设置其实已写入，只是提示被更具体作用域覆盖，属正常，静默吞掉。
+# 注意 -ErrorAction SilentlyContinue 对此无效（实测仍打印红字），必须 try/catch。
+try { Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force -ErrorAction Stop }
+catch [System.Security.SecurityException] { }
+catch { Warn ('执行策略设置失败：' + $_.Exception.Message) }
+# 查【有效】策略而非 CurrentUser 作用域值：被组策略锁定时作用域值照样写成 RemoteSigned，
+# 但有效策略仍是 Restricted、npm.ps1 照样被拦——只查作用域会误报"通过"。
+$eff = (Get-ExecutionPolicy).ToString()
+if ($eff -eq 'RemoteSigned' -or $eff -eq 'Unrestricted' -or $eff -eq 'Bypass') { Ok ('执行策略可用：' + $eff) }
+else { Warn ('有效策略为 ' + $eff + '：npm.ps1 可能仍被拦（常见于组策略锁定的公司电脑）。若后续报"禁止运行脚本"，请重开终端重试，或联系 IT。') }
 
 # ---------- 4/8 关闭自动更新 ----------
 Step '4/8 关闭 Claude Code 自动更新（强烈建议）'
