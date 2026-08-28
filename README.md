@@ -44,6 +44,68 @@ irm https://gitee.com/yellowgu/cc-toolkit/raw/main/install.ps1 -OutFile install.
 - 脚本来自本仓库源码，**不放心的同学可先在网页查看 install.ps1 源码**，再下载运行（两轨一致）
 - 供应链说明：本脚本是"下载即执行"，请自行判断信任。所有下载地址均为固定版本（不随最新版漂移）
 
+## 预期输出示例（全新安装 · 节选）
+
+> 2026-08-28 沙盒实测录制：脚本 V1.1.0 + Claude Code 2.1.250。版本号、包数、exe 大小随安装时点浮动，`[通过]` 标记是校验重点。
+> 示例为无人值守模式（预置 `CC_TOOLKIT_DS_KEY`）；交互模式步骤 7 会先询问（回车确认 → 粘贴 API Key，输入不回显），见上文注意事项。
+
+```powershell
+================================================================
+  cc-toolkit V1.1.0 —— Claude Code 国内安装/修复脚本
+  源码可见：https://gitee.com/yellowgu/cc-toolkit  （非官方，与 Anthropic 无关）
+================================================================
+  [说明] 本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → 模型配置(交互) → 收尾验证
+
+[步骤] 1/8 环境检测
+  [说明] 当前非管理员窗口。本脚本仅在"需要安装 Node"时才要求管理员。
+  [通过] Node.js 已安装：v26.7.0
+  [说明] 未检测到 claude 命令，稍后步骤 5/8 将自动安装。
+
+[步骤] 2/8 安装 Node —— 已跳过（本机已有 Node ≥ 20）
+
+[步骤] 3/8 解除 PowerShell 执行策略拦截
+  [通过] 执行策略可用：RemoteSigned
+
+[步骤] 4/8 关闭 Claude Code 自动更新（强烈建议）
+  [通过] DISABLE_AUTOUPDATER=1 已存在，跳过。
+  [通过] 自检通过：环境变量已生效。
+
+[步骤] 5/8 安装 Claude Code（npm 全局 + npmmirror 镜像）
+  [说明] 执行：npm install -g @anthropic-ai/claude-code（npmmirror 镜像）……
+  added 2 packages in 7s
+  npm warn install-scripts 1 package has install scripts not yet covered by allowScripts
+  npm warn install-scripts   @anthropic-ai/claude-code@2.1.250 (postinstall: node install.cjs)
+  [通过] 安装成功：2.1.250 (Claude Code)
+
+[步骤] 6/8 故障修复自检（每项先检测，有故障才修复）
+  [通过] claude 命令可用，shim 无需修复。
+  [通过] bin\claude.exe 正常（216MB，MZ 头）。
+  [通过] 无残留 .old.* 备份。
+
+[步骤] 7/8 模型配置（交互）+ settings.json 自动写入（自动合并 + 备份 + 可回滚）
+  [说明] 检测到环境变量 CC_TOOLKIT_DS_KEY，自动配置 DeepSeek 模型（无人值守模式，跳过询问）。
+  [通过] 已收到 Key（只写入本机 settings.json，不上传）。
+  [说明]   env.ANTHROPIC_MODEL = deepseek-v4-pro
+  [说明]   env.ANTHROPIC_BASE_URL = https://api.deepseek.com/anthropic
+  [说明]   env.ANTHROPIC_AUTH_TOKEN = sk-***（已隐藏显示）
+  [通过] settings.json 已合并写入（其他已有配置键全部保留）。
+
+[步骤] 8/8 收尾验证
+  [通过] 验证通过：2.1.250 (Claude Code)
+
+================================================================
+  全部步骤完成。
+  [说明] 下一步：
+  [说明]   1. 关闭本窗口，重新打开 PowerShell（让环境变量与 PATH 生效）
+  [说明]   2. 已配置 DeepSeek 模型：重开终端后直接运行 claude 即可使用（免登录）
+```
+
+对照说明：
+
+- 第 3 步通过时显示的策略名以终端实际为准（`RemoteSigned` / `Bypass` 都算通过）
+- 步骤 5 的 npm 警告是 npm 默认拦截安装脚本所致；Claude Code 包自带预编译二进制，实测 `claude --version`、`claude.cmd`、`bin\claude.exe` 均正常
+- 步骤 7 的 9 个 env 键（8 个 DeepSeek 模型键 + `DISABLE_AUTOUPDATER`）全部自动写入，写入前自动备份 `settings.json.bak-<时间戳>` 供回滚
+
 ## 已有 Claude Code？装 Plugin 让修复自动化
 
 在 Claude Code 会话里：
