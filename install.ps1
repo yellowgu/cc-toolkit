@@ -1,5 +1,5 @@
 ﻿# ============================================================
-#  cc-toolkit / install.ps1  V1.1.0
+#  cc-toolkit / install.ps1  V1.2.0
 #  Claude Code 国内安装/修复一键脚本（Windows 11 + PowerShell 5.1）
 #  中国网络环境：npm 走 npmmirror 镜像，Node 走 npmmirror CDN
 #  源码仓库：https://gitee.com/yellowgu/cc-toolkit
@@ -20,7 +20,7 @@ function Die($msg)  { Bad $msg; exit 1 }
 
 # ---------- 横幅 ----------
 Say '================================================================'
-Say '  cc-toolkit V1.1.0 —— Claude Code 国内安装/修复脚本'
+Say '  cc-toolkit V1.2.0 —— Claude Code 国内安装/修复脚本'
 Say ('  源码可见：' + $RepoUrl + '  （非官方，与 Anthropic 无关）')
 Say '================================================================'
 Tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → 模型配置(交互) → 收尾验证'
@@ -37,14 +37,14 @@ if ($nodeCmd) {
     try {
         $nv = (& node -v 2>$null | Out-String).Trim()
         if ($nv -match '^v(\d+)') {
-            if ([int]$Matches[1] -ge 20) { $nodeOk = $true; Ok ('Node.js 已安装：' + $nv) }
-            else { Warn ('Node.js 版本过低：' + $nv + '（需要 ≥ 20，脚本将重装）') }
+            if ([int]$Matches[1] -ge 22) { $nodeOk = $true; Ok ('Node.js 已安装：' + $nv) }
+            else { Warn ('Node.js 版本过低：' + $nv + '（需要 ≥ 22，脚本将重装）') }
         }
     } catch { Warn 'node 存在但版本获取失败，视为缺失' }
 }
 if (-not $nodeOk) {
     if (-not $isAdmin) { Die '未检测到可用的 Node.js，而安装 Node 需要管理员权限。请关闭本窗口，右键 PowerShell"以管理员身份运行"，重新执行本脚本。' }
-    Tip '未检测到 Node.js ≥ 20，稍后步骤 2/8 将自动安装。'
+    Tip '未检测到 Node.js ≥ 22，稍后步骤 2/8 将自动安装。'
 }
 
 $hasClaude = $null -ne (Get-Command claude -ErrorAction SilentlyContinue)
@@ -75,7 +75,7 @@ if (-not $nodeOk) {
         exit 0
     } catch { Die 'Node 下载或安装失败。请检查网络后重跑；或改 v24.19.0 直链手动下载。' }
 } else {
-    Step '2/8 安装 Node —— 已跳过（本机已有 Node ≥ 20）'
+    Step '2/8 安装 Node —— 已跳过（本机已有 Node ≥ 22）'
 }
 
 # ---------- 3/8 解除执行策略 ----------
@@ -95,7 +95,7 @@ else { Warn ('有效策略为 ' + $eff + '：npm.ps1 可能仍被拦（常见于
 
 # ---------- 4/8 关闭自动更新 ----------
 Step '4/8 关闭 Claude Code 自动更新（强烈建议）'
-Tip '唯一有效开关是环境变量 DISABLE_AUTOUPDATER=1（settings.json 里的 autoUpdates 键已废弃，勿用）。写入用户级环境变量（所有 shell 生效）。'
+Tip '双保险关闭自动更新：① settings.json 顶层布尔键 "autoUpdates": false（必须手改 JSON——claude config set -g 有 bug 会存成字符串不生效），稍后 7/8 自动写入；② 环境变量 DISABLE_AUTOUPDATER=1（用户级，所有 shell 生效）。'
 $cur = [Environment]::GetEnvironmentVariable('DISABLE_AUTOUPDATER', 'User')
 if ($cur -ne '1') {
     [Environment]::SetEnvironmentVariable('DISABLE_AUTOUPDATER', '1', 'User')
@@ -219,7 +219,7 @@ if (-not [string]::IsNullOrWhiteSpace($env:CC_TOOLKIT_DS_KEY)) {
 }
 
 # 7b. 合并写入 env 块（备份 + 保留其他键 + 回滚提示）
-$envPatch = @{ 'DISABLE_AUTOUPDATER' = '1' }
+$envPatch = @{ 'DISABLE_AUTOUPDATER' = '1'; 'CLAUDE_CODE_EFFORT_LEVEL' = 'max' }
 if ($useDS) {
     $envPatch['ANTHROPIC_BASE_URL'] = 'https://api.deepseek.com/anthropic'
     $envPatch['ANTHROPIC_AUTH_TOKEN'] = $dsKey
@@ -250,12 +250,15 @@ foreach ($k in $envPatch.Keys) {
     if (-not $jsonObj.env.PSObject.Properties[$k]) { $jsonObj.env | Add-Member -NotePropertyName $k -NotePropertyValue $envPatch[$k] }
     else { $jsonObj.env.$k = $envPatch[$k] }
 }
+# 顶层布尔键 autoUpdates: false（必须手改 JSON；claude config set -g 会存成字符串不生效）
+$jsonObj | Add-Member -NotePropertyName autoUpdates -NotePropertyValue $false -Force
 $out = $jsonObj | ConvertTo-Json -Depth 10
 $settingsDir = Split-Path $settingsPath
 if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
 [System.IO.File]::WriteAllText($settingsPath, $out, (New-Object System.Text.UTF8Encoding $false))
 Tip '改动内容：'
 foreach ($k in $envPatch.Keys) { if ($k -ne 'ANTHROPIC_AUTH_TOKEN') { Tip ('  env.' + $k + ' = ' + $envPatch[$k]) } }
+Tip '  autoUpdates = false（顶层布尔键）'
 if ($useDS) { Tip '  env.ANTHROPIC_AUTH_TOKEN = sk-***（已隐藏显示）' }
 Tip ('如需回滚：Copy-Item "' + $bak + '" "' + $settingsPath + '"')
 Ok 'settings.json 已合并写入（其他已有配置键全部保留）。'
