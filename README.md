@@ -120,7 +120,7 @@ macOS（install.sh，8 步，同构）：步骤 2 = pkg 下载 + sudo 静默安�
 [步骤] 7/8 模型配置（交互）+ settings.json 自动写入（自动合并 + 备份 + 可回滚）
   [说明] 检测到环境变量 CC_TOOLKIT_DS_KEY，自动配置 DeepSeek 模型（无人值守模式，跳过询问）。
   [通过] 已收到 Key（只写入本机 settings.json，不上传）。
-  [说明]   env.ANTHROPIC_MODEL = deepseek-v4-pro
+  [说明]   env.ANTHROPIC_MODEL = deepseek-flash
   [说明]   env.ANTHROPIC_BASE_URL = https://api.deepseek.com/anthropic
   [说明]   env.ANTHROPIC_AUTH_TOKEN = sk-***（已隐藏显示）
   [通过] settings.json 已合并写入（其他已有配置键全部保留）。
@@ -182,12 +182,12 @@ npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.c
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
     "ANTHROPIC_AUTH_TOKEN": "sk-你的key",
-    "ANTHROPIC_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-flash",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash",
-    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-v4-pro",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro" } }
+    "ANTHROPIC_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-flash",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-flash" } }
 
 # 5. 验证
 claude --version
@@ -217,12 +217,12 @@ npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.c
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
     "ANTHROPIC_AUTH_TOKEN": "sk-你的key",
-    "ANTHROPIC_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-flash",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash",
-    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-v4-pro",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro" } }
+    "ANTHROPIC_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-flash",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-flash" } }
 
 # 4. 验证
 claude --version

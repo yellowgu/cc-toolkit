@@ -223,12 +223,12 @@ $envPatch = @{ 'DISABLE_AUTOUPDATER' = '1'; 'CLAUDE_CODE_EFFORT_LEVEL' = 'max' }
 if ($useDS) {
     $envPatch['ANTHROPIC_BASE_URL'] = 'https://api.deepseek.com/anthropic'
     $envPatch['ANTHROPIC_AUTH_TOKEN'] = $dsKey
-    $envPatch['ANTHROPIC_MODEL'] = 'deepseek-v4-pro'
-    $envPatch['ANTHROPIC_DEFAULT_OPUS_MODEL'] = 'deepseek-v4-pro'
-    $envPatch['ANTHROPIC_DEFAULT_SONNET_MODEL'] = 'deepseek-v4-flash'
-    $envPatch['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = 'deepseek-v4-flash'
-    $envPatch['ANTHROPIC_DEFAULT_FABLE_MODEL'] = 'deepseek-v4-pro'
-    $envPatch['CLAUDE_CODE_SUBAGENT_MODEL'] = 'deepseek-v4-pro'
+    $envPatch['ANTHROPIC_MODEL'] = 'deepseek-flash'
+    $envPatch['ANTHROPIC_DEFAULT_OPUS_MODEL'] = 'deepseek-flash'
+    $envPatch['ANTHROPIC_DEFAULT_SONNET_MODEL'] = 'deepseek-flash'
+    $envPatch['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = 'deepseek-flash'
+    $envPatch['ANTHROPIC_DEFAULT_FABLE_MODEL'] = 'deepseek-flash'
+    $envPatch['CLAUDE_CODE_SUBAGENT_MODEL'] = 'deepseek-flash'
 }
 $bak = $settingsPath + '.bak-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 $jsonObj = $null

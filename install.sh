@@ -300,12 +300,12 @@ env.CLAUDE_CODE_EFFORT_LEVEL = 'max';
 var dsKeys = {
   ANTHROPIC_BASE_URL: 'https://api.deepseek.com/anthropic',
   ANTHROPIC_AUTH_TOKEN: dsKey,
-  ANTHROPIC_MODEL: 'deepseek-v4-pro',
-  ANTHROPIC_DEFAULT_OPUS_MODEL: 'deepseek-v4-pro',
-  ANTHROPIC_DEFAULT_SONNET_MODEL: 'deepseek-v4-flash',
-  ANTHROPIC_DEFAULT_HAIKU_MODEL: 'deepseek-v4-flash',
-  ANTHROPIC_DEFAULT_FABLE_MODEL: 'deepseek-v4-pro',
-  CLAUDE_CODE_SUBAGENT_MODEL: 'deepseek-v4-pro'
+  ANTHROPIC_MODEL: 'deepseek-flash',
+  ANTHROPIC_DEFAULT_OPUS_MODEL: 'deepseek-flash',
+  ANTHROPIC_DEFAULT_SONNET_MODEL: 'deepseek-flash',
+  ANTHROPIC_DEFAULT_HAIKU_MODEL: 'deepseek-flash',
+  ANTHROPIC_DEFAULT_FABLE_MODEL: 'deepseek-flash',
+  CLAUDE_CODE_SUBAGENT_MODEL: 'deepseek-flash'
 };
 if (useDs) { Object.keys(dsKeys).forEach(function (k) { env[k] = dsKeys[k]; }); }
 var dir = path.dirname(settingsPath);
