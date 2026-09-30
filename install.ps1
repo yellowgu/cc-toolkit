@@ -1,5 +1,5 @@
 ﻿# ============================================================
-#  cc-toolkit / install.ps1  V1.2.0
+#  cc-toolkit / install.ps1  V1.3.0
 #  Claude Code 国内安装/修复一键脚本（Windows 11 + PowerShell 5.1）
 #  中国网络环境：npm 走 npmmirror 镜像，Node 走 npmmirror CDN
 #  源码仓库：https://gitee.com/yellowgu/cc-toolkit
@@ -20,7 +20,7 @@ function Die($msg)  { Bad $msg; exit 1 }
 
 # ---------- 横幅 ----------
 Say '================================================================'
-Say '  cc-toolkit V1.2.0 —— Claude Code 国内安装/修复脚本'
+Say '  cc-toolkit V1.3.0 —— Claude Code 国内安装/修复脚本'
 Say ('  源码可见：' + $RepoUrl + '  （非官方，与 Anthropic 无关）')
 Say '================================================================'
 Tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 解除执行策略 → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → 模型配置(交互) → 收尾验证'
@@ -95,7 +95,7 @@ else { Warn ('有效策略为 ' + $eff + '：npm.ps1 可能仍被拦（常见于
 
 # ---------- 4/8 关闭自动更新 ----------
 Step '4/8 关闭 Claude Code 自动更新（强烈建议）'
-Tip '双保险关闭自动更新：① settings.json 顶层布尔键 "autoUpdates": false（必须手改 JSON——claude config set -g 有 bug 会存成字符串不生效），稍后 7/8 自动写入；② 环境变量 DISABLE_AUTOUPDATER=1（用户级，所有 shell 生效）。'
+Tip '关闭自动更新（官方现行方式）：① 用户级环境变量 DISABLE_AUTOUPDATER=1（本步写入，所有 shell 生效）；② settings.json 的 env.DISABLE_AUTOUPDATER="1"（步骤 7/8 合并写入）。注：旧的顶层 autoUpdates 布尔键已废弃，本脚本不再写入。'
 $cur = [Environment]::GetEnvironmentVariable('DISABLE_AUTOUPDATER', 'User')
 if ($cur -ne '1') {
     [Environment]::SetEnvironmentVariable('DISABLE_AUTOUPDATER', '1', 'User')
@@ -250,15 +250,15 @@ foreach ($k in $envPatch.Keys) {
     if (-not $jsonObj.env.PSObject.Properties[$k]) { $jsonObj.env | Add-Member -NotePropertyName $k -NotePropertyValue $envPatch[$k] }
     else { $jsonObj.env.$k = $envPatch[$k] }
 }
-# 顶层布尔键 autoUpdates: false（必须手改 JSON；claude config set -g 会存成字符串不生效）
-$jsonObj | Add-Member -NotePropertyName autoUpdates -NotePropertyValue $false -Force
+# 不再写入顶层 autoUpdates —— 该键已废弃（官方："We've deprecated config autoUpdates"）。
+# 关闭自动更新由 env.DISABLE_AUTOUPDATER 承担（见上方 $envPatch）。
+# 无需清理旧配置里的残留：CLI 会自动迁移该键并在迁移后把它删掉。
 $out = $jsonObj | ConvertTo-Json -Depth 10
 $settingsDir = Split-Path $settingsPath
 if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
 [System.IO.File]::WriteAllText($settingsPath, $out, (New-Object System.Text.UTF8Encoding $false))
 Tip '改动内容：'
 foreach ($k in $envPatch.Keys) { if ($k -ne 'ANTHROPIC_AUTH_TOKEN') { Tip ('  env.' + $k + ' = ' + $envPatch[$k]) } }
-Tip '  autoUpdates = false（顶层布尔键）'
 if ($useDS) { Tip '  env.ANTHROPIC_AUTH_TOKEN = sk-***（已隐藏显示）' }
 Tip ('如需回滚：Copy-Item "' + $bak + '" "' + $settingsPath + '"')
 Ok 'settings.json 已合并写入（其他已有配置键全部保留）。'

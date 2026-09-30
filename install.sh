@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#  cc-toolkit / install.sh  V1.2.0
+#  cc-toolkit / install.sh  V1.3.0
 #  Claude Code 国内安装/修复一键脚本（macOS 13+，bash 3.2 兼容）
 #  中国网络环境：npm 走 npmmirror 镜像，Node 走 npmmirror CDN
 #  源码仓库：https://gitee.com/yellowgu/cc-toolkit
@@ -55,7 +55,7 @@ HAS_PGREP=0; command -v pgrep >/dev/null 2>&1 && HAS_PGREP=1
 
 # ---------- 横幅 ----------
 say '================================================================'
-say '  cc-toolkit V1.2.0 —— Claude Code 国内安装/修复脚本（macOS）'
+say '  cc-toolkit V1.3.0 —— Claude Code 国内安装/修复脚本（macOS）'
 say "  源码可见：$REPO_URL  （非官方，与 Anthropic 无关）"
 say '================================================================'
 tip '本脚本将按顺序执行：环境检测 → 装 Node(如需) → 修复 npm 全局目录(EACCES) → 关闭自动更新 → 安装 Claude Code → 故障修复自检 → 模型配置(交互) → 收尾验证'
@@ -151,11 +151,11 @@ esac
 # ---------- 4/8 关闭自动更新 ----------
 step '4/8 关闭 Claude Code 自动更新（强烈建议）'
 # 实际写入在 7b 完成；此处只检查+预告（对应 Windows 版写用户级环境变量）
-if [ -f "$HOME/.claude/settings.json" ] && node -e "var o=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(o.autoUpdates===false?0:1)" "$HOME/.claude/settings.json" 2>/dev/null; then
-  ok '已检测到 settings.json 顶层 autoUpdates: false，跳过。'
+if [ -f "$HOME/.claude/settings.json" ] && node -e "var o=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(o&&o.env&&o.env.DISABLE_AUTOUPDATER==='1'?0:1)" "$HOME/.claude/settings.json" 2>/dev/null; then
+  ok '已检测到 settings.json 的 env.DISABLE_AUTOUPDATER=1，跳过。'
 else
-  tip '本机尚未写入 autoUpdates: false（官方新键）。注意勿用 `claude config set -g`——有 bug 会存成字符串不生效。'
-  tip '步骤 7/8 合并时将直接手改 JSON 写入 autoUpdates: false（布尔）并备份，同时写 env.DISABLE_AUTOUPDATER=1 兜底。'
+  tip '本机尚未写入 env.DISABLE_AUTOUPDATER=1（关闭自动更新的官方现行方式）。'
+  tip '步骤 7/8 合并时将手改 JSON 写入该 env 键并备份。注：旧的顶层 autoUpdates 布尔键已废弃，本脚本不再写入。'
 fi
 
 # ---------- 5/8 安装 Claude Code ----------
@@ -268,7 +268,7 @@ merge_settings() {
   # $1=settings 路径 $2=是否配置 DS(0/1) $3=DS Key $4=备份时间戳
   local settings="$1" use_ds="$2" ds_key="$3" ts="$4"
   if [ "$DRY_RUN" = "1" ]; then
-    tip '[DRY_RUN 模拟] 合并写入 settings.json（autoUpdates: false + env 键 + 备份）。'
+    tip '[DRY_RUN 模拟] 合并写入 settings.json（env 键 + 备份）。'
     return 0
   fi
   node - "$settings" "$use_ds" "$ds_key" "$ts" <<'NODEJS'
@@ -291,8 +291,8 @@ if (fs.existsSync(settingsPath)) {
     obj = {};
   }
 }
-// 顶层布尔键：必须手改 JSON（claude config set -g 有 bug 会存成字符串不生效）
-obj.autoUpdates = false;
+// 不再写入顶层 autoUpdates —— 该键已废弃（官方："We've deprecated config autoUpdates"）。
+// 旧配置里的残留无需清理：CLI 会自动迁移该键并在迁移后把它删掉。
 var env = (typeof obj.env === 'object' && obj.env !== null && !Array.isArray(obj.env)) ? obj.env : {};
 obj.env = env;
 env.DISABLE_AUTOUPDATER = '1';
@@ -312,7 +312,6 @@ var dir = path.dirname(settingsPath);
 if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
 fs.writeFileSync(settingsPath, JSON.stringify(obj, null, 2) + '\n', 'utf8');
 console.log('  改动内容：');
-console.log('  autoUpdates = false（顶层布尔键）');
 console.log('  env.DISABLE_AUTOUPDATER = 1');
 console.log('  env.CLAUDE_CODE_EFFORT_LEVEL = max');
 if (useDs) {

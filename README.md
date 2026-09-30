@@ -1,6 +1,6 @@
 # cc-toolkit — Claude Code 国内安装/修复工具箱
 
-> 面向国内 Windows 与 macOS 用户的一键安装与故障修复工具：npmmirror 镜像安装、EBUSY/占位 exe 修复、关闭自动更新。
+> 面向国内 Windows 与 macOS 用户的一键安装与故障修复工具：npmmirror 镜像安装、EBUSY/ENOTEMPTY 占用与占位 exe 修复、关闭自动更新。
 > **非官方项目，与 Anthropic 无任何关系**——仅分享中国网络环境下的实战经验。适用于 Windows 11 + PowerShell 5.1 / macOS 13+。
 
 [![Gitee](https://img.shields.io/badge/Gitee-yellowgu%2Fcc--toolkit-red)](https://gitee.com/yellowgu/cc-toolkit)
@@ -82,7 +82,8 @@ macOS（install.sh，8 步，同构）：步骤 2 = pkg 下载 + sudo 静默安�
 
 > 2026-08-28 沙盒实测录制：脚本 V1.1.0 + Claude Code 2.1.250。版本号、包数、exe 大小随安装时点浮动，`[通过]` 标记是校验重点。
 > 示例为无人值守模式（预置 `CC_TOOLKIT_DS_KEY`）；交互模式步骤 7 会先询问（回车确认 → 粘贴 API Key，输入不回显），见上文注意事项。
-> V1.2.0 输出同构（差异仅：步骤 1 门槛显示 ≥ 22、步骤 4/7 文案与回显含 autoUpdates 布尔键）；下方为历史实录，待下次全新安装更新。
+> V1.2.0 输出同构（差异仅：步骤 1 门槛显示 ≥ 22、步骤 4/7 文案与回显含 autoUpdates 布尔键）。
+> **V1.3.0 起不再写入顶层 `autoUpdates` 键**（该键已废弃），步骤 4/7 的回显相应改为只显示 `env.DISABLE_AUTOUPDATER`；下方为历史实录，待下次全新安装更新。
 
 ```powershell
 ================================================================
@@ -139,7 +140,7 @@ macOS（install.sh，8 步，同构）：步骤 2 = pkg 下载 + sudo 静默安�
 
 - 第 3 步通过时显示的策略名以终端实际为准（`RemoteSigned` / `Bypass` 都算通过）
 - 步骤 5 的 npm 警告是 npm 默认拦截安装脚本所致；Claude Code 包自带预编译二进制，实测 `claude --version`、`claude.cmd`、`bin\claude.exe` 均正常
-- 步骤 7 的 10 个 env 键（8 个 DeepSeek 模型键 + `DISABLE_AUTOUPDATER` + `CLAUDE_CODE_EFFORT_LEVEL`）与顶层 `autoUpdates: false` 全部自动写入，写入前自动备份 `settings.json.bak-<时间戳>` 供回滚
+- 步骤 7 的 10 个 env 键（8 个 DeepSeek 模型键 + `DISABLE_AUTOUPDATER` + `CLAUDE_CODE_EFFORT_LEVEL`）自动写入，写入前自动备份 `settings.json.bak-<时间戳>` 供回滚。**V1.3.0 起不再写顶层 `autoUpdates`**（已废弃）
 - macOS 输出同构，差异仅：步骤 2 = pkg + sudo 安装、步骤 3 = prefix 修复提示、步骤 4 为预告文案（写入在步骤 7）；不伪造未真机实录的 macOS 示例
 
 ## 已有 Claude Code？装 Plugin 让修复自动化
@@ -176,8 +177,7 @@ Get-Process claude   # 必须无输出
 npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.com/
 
 # 4. （可选）配置 DeepSeek 模型：%USERPROFILE%\.claude\settings.json（已有内容合并勿删）
-{ "autoUpdates": false,
-  "env": {
+{ "env": {
     "DISABLE_AUTOUPDATER": "1",
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
@@ -211,8 +211,7 @@ pgrep -f '[c]laude'   # 必须无输出；方括号防命令自身误匹配
 npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.com/
 
 # 3. （可选）配置 DeepSeek 模型：~/.claude/settings.json（已有内容合并勿删）
-{ "autoUpdates": false,
-  "env": {
+{ "env": {
     "DISABLE_AUTOUPDATER": "1",
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
@@ -235,11 +234,13 @@ claude --version
 | 症状 | 原因 | 修复 |
 |---|---|---|
 | `npm : 无法加载文件 ...npm.ps1，因为在此系统上禁止运行脚本` | 执行策略拦截 | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`，重开终端 |
-| `npm install` 报 **EBUSY** 且留半成品 | Claude Code 正在运行锁住了 exe | 关闭**所有** Claude Code 窗口后重装 |
+| `npm install` 报 **EBUSY / ENOTEMPTY** 且留半成品 | Claude Code 正在运行锁住了 exe | 关闭**所有** Claude Code 窗口后重装 |
 | `claude` 命令无法识别 | `claude.cmd` shim 丢失 | 安装脚本 6a 自动重建；手动内容见 install.ps1 |
 | `Program 'claude.exe' failed to run: ... not a valid application` | `bin\claude.exe` 是 500 字节占位脚本 | 从同包 `node_modules\@anthropic-ai\claude-code-win32-x64\claude.exe` 复制回 `bin\claude.exe`（脚本 6b 自动做） |
 | 更新中断留下 `claude.exe.old.*`（几百 MB） | 更新被打断 | 确认 `claude --version` 正常后删除（脚本 6c 自动做） |
-| 版本总被自动更新 | 未关自动更新 | settings.json 顶层 `autoUpdates: false`（官方新键，须手改 JSON，**勿用** `claude config set -g`——有 bug 存字符串不生效）+ `DISABLE_AUTOUPDATER=1` 兜底（脚本 4/8+7/8 自动做） |
+| 版本总被自动更新 | 未关自动更新 | `settings.json` 的 `env.DISABLE_AUTOUPDATER="1"`（官方现行方式；脚本 4/8+7/8 自动做）。⚠️ 网上教程常见的**顶层 `autoUpdates: false` 键已废弃**，写了会被 CLI 自动迁移掉 |
+| 跑 `claude config` 报未知命令 | 该子命令已在 v2.0.0 移除 | 直接编辑 `settings.json`，或会话内用 `/config` |
+| 装上但**没有可执行文件** | 镜像站未同步全部平台子包 | 主包依赖 8 个 `@anthropic-ai/claude-code-*` 平台包，换全量同步的镜像源重装 |
 
 ### macOS
 
@@ -249,7 +250,7 @@ claude --version
 | `claude: command not found` | ~/.npm-global/bin 不在 PATH | `source ~/.zprofile` 或重开终端 |
 | 安装 Node 时 sudo 卡住 | 密码输入不回显属正常 | 直接输入开机密码回车；输错则重跑脚本 |
 | "已损坏，无法打开"（Gatekeeper） | 未公证/被隔离 | 本仓库链路 curl 下载无检疫；如遇：右键"打开"，或 `xattr -d com.apple.quarantine <文件>` |
-| 装 CC 报 **EBUSY** | claude 进程在跑 | 关闭所有 Claude Code 窗口再装（脚本绝不强杀进程，禁 `killall node`） |
+| 装 CC 报 **EBUSY / ENOTEMPTY** | claude 进程在跑 | 关闭所有 Claude Code 窗口再装（脚本绝不强杀进程，禁 `killall node`） |
 
 ## FAQ
 
@@ -260,7 +261,7 @@ claude --version
 
 **怎么卸载？** `npm uninstall -g @anthropic-ai/claude-code`。
 
-**能配第三方模型（如 DeepSeek）吗？** 可以，而且安装脚本最后会**交互询问**——回车确认后粘贴 DeepSeek API Key 即自动配好（模型映射、base_url、token 全写入 settings.json，只写本机）。错过询问也没关系：重跑脚本即可补配，或按"手动安装步骤"第 4 步手工配置。更多模型配置玩法（`--settings` 文件、双模型快捷启动）见本仓库 skill 第 6 节（注意：该节含 `--dangerously-skip-permissions` 启动方式，仅建议单机本地自用）。
+**能配第三方模型（如 DeepSeek）吗？** 可以，而且安装脚本最后会**交互询问**——回车确认后粘贴 DeepSeek API Key 即自动配好（模型映射、base_url、token 全写入 settings.json，只写本机）。错过询问也没关系：重跑脚本即可补配，或按"手动安装步骤"第 4 步手工配置。更多模型配置玩法（`--settings` 文件、多模型快捷启动）见本仓库 skill 第 6 节。⚠️ 该节**不含** `--dangerously-skip-permissions` —— 该参数跳过全部权限确认、可被提示注入操控执行任意命令，本仓库不建议使用。
 
 **macOS 为什么不用 `curl | bash`？** 管道会占用标准输入，脚本的 Key 交互询问与结尾暂停会被自动跳过；且直接执行无法先审源码。本仓库命令先下载再执行（`-o install.sh && bash install.sh`），可先打开文件查看。
 
