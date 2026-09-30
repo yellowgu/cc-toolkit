@@ -272,6 +272,6 @@ claude --version
 ## 关于
 
 - 作者：yellowgu（[Gitee](https://gitee.com/yellowgu) / [GitHub](https://github.com/yellowgu)）
-- forge-ai 开源系列项目
+- ForgingCat AI 开源系列项目
 - 反馈问题请提 [Issues](https://gitee.com/yellowgu/cc-toolkit/issues)
 - License: MIT
